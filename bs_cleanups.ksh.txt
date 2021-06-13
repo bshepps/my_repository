@@ -1,0 +1,113 @@
+#!/usr/bin/ksh
+# Removes files last accessed earler than the last system reboot.
+# Creates a backup of them first. 
+# for the specified directory eg: /home/brett/testdir
+
+#backup file
+prefix="backup.$(date +"%d-%m-%Y").v"
+let version=0
+suffix='.tar'
+bkup_dir='/tmp/'
+
+
+parmcount=$#
+directory_root=$1
+
+workfile="/tmp/purge_$$.txt"
+logfile="/tmp/purge_$$.log"
+
+#Check file to backup to
+archive() {
+myfile="$bkup_dir$prefix$version$suffix"
+while [ -e "$myfile.Z" ]
+        do
+        let version=$version+1
+        myfile="$bkup_dir$prefix$version$suffix"
+        done
+print "using file $myfile"
+}
+
+# Test passed variable.
+check_input() {
+if [ $parmcount != 1 ]
+then
+print "Parameter required.
+Please enter a directory to process.
+eg /tmp/"
+exit
+fi
+if [ $directory_root = '/' ]
+then
+print "Processing $directory_root is not permitted
+Please enter a valid directory to process.
+eg /tmp/"
+exit
+fi
+if [ -e $directory_root ]
+then
+print "Directory to process is valid"
+else
+print "Directory $directory_root doesn't exist
+please select a valid directory"
+exit
+fi
+print "Parameter $directory_root has been passed"
+}
+
+# Get days to purge up to
+lastboot(){
+purge_to_days=$(uptime | awk '{print $3}')
+print "Purge to days is $purge_to_days"
+}
+
+#Create a list of files to be processed
+crt_list() {
+find $directory_root -type f -atime +$purge_to_days > $workfile
+#perhaps test if file empty, if it is maybe end the program here.
+}
+
+#Create backup of files to be processed.
+crt_backup() {
+tar -cvf $myfile -L $workfile
+tar -tf $myfile > /tmp/wf.$$
+if [[ -z $(diff /tmp/wf.$$ $workfile) ]]
+then
+compress $myfile
+else
+print "Backup inconsistent with list being processed
+exiting"
+exit
+#Note could run a file comparion out here
+fi
+}
+
+# Run the purge
+start_purge() {
+print "Restore process
+uncompress $myfile.Z
+tar -tvf $myfile to see it's content
+tar -xvf $myfile <filename> to restore
+-------------------------"
+cat $workfile | while read line
+do
+echo rm $line | tee -a $logfile
+rm $line
+done
+echo rm /tmp/wf.$$ | tee -a $logfile
+rm /tmp/wf.$$
+echo rm $workfile | tee -a $logfile
+rm $workfile
+}
+
+
+
+
+#------------------------------------
+#Main
+#------------------------------------
+check_input
+archive
+lastboot
+crt_list
+crt_backup
+start_purge
