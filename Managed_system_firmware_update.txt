@@ -1,0 +1,28 @@
+#On the HMC
+mkdir fw_update
+#Transfer images to HMC
+scp *.* ddadmin@akl0mg20a:/home/ddadmin/fw_update/
+#Check all images are on HMC
+ls fw_update
+#Check firmware key expiration date.
+lslic -m akl2bu940 -F mtms,update_access_key_exp_date
+#Commit existing firmware 
+updlic -o c -v -m akl2bu940
+>8286-42A*84D6FEW: Updating accepted level.
+>8286-42A*84D6FEW Managed System Primary: Accepting updates.
+>8286-42A*84D6FEW: Completed All Updates.
+#Review levels
+lslic -m akl2bu940 -F activated_level,installed_level,accepted_level
+>165,165,165
+#Confirm the readiness for Upgrade
+updlic -o k -v -m akl2bu940
+echo $?
+>0
+#Check level of code that will be installed
+lslic -m akl2bu940 -t sys -r mountpoint -d /home/ddadmin/fw_update/ -F concurrent_retrievable_level
+>215
+#To Retrieve,install and activate LIC update.
+updlic -m akl2bu940 -o a -t sys -l latest -r mountpoint -d /home/ddadmin/fw_update/
+9:23 am 16/06/2021 - 9:45 am 16/06/2021
+#Check activated level of firmware is now SV860_215
+lslic -m akl2bu940
